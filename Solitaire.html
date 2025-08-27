@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klondike Solitaire</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: green; margin: 0; padding: 20px; }
+        #game { max-width: 1200px; margin: auto; }
+        .pile { width: 80px; height: 120px; border: 2px dashed #fff; display: inline-block; margin: 5px; vertical-align: top; position: relative; }
+        .card { width: 80px; height: 120px; background: white; border: 1px solid #000; border-radius: 5px; position: absolute; cursor: move; text-align: center; line-height: 120px; font-size: 16px; }
+        .card.red { color: red; }
+        .card.black { color: black; }
+        .stock, .waste { width: 80px; height: 120px; }
+        .foundation { background: lightyellow; }
+        .tableau { min-height: 120px; }
+        .card.face-down { background: navy; color: navy; }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="stock" class="pile stock"></div>
+        <div id="waste" class="pile waste"></div>
+        <div style="display: inline-block; width: 360px;"></div>
+        <div id="foundation-0" class="pile foundation"></div>
+        <div id="foundation-1" class="pile foundation"></div>
+        <div id="foundation-2" class="pile foundation"></div>
+        <div id="foundation-3" class="pile foundation"></div>
+        <br />
+        <div id="tableau-0" class="pile tableau"></div>
+        <div id="tableau-1" class="pile tableau"></div>
+        <div id="tableau-2" class="pile tableau"></div>
+        <div id="tableau-3" class="pile tableau"></div>
+        <div id="tableau-4" class="pile tableau"></div>
+        <div id="tableau-5" class="pile tableau"></div>
+        <div id="tableau-6" class="pile tableau"></div>
+    </div>
+    <script>
+        const suits = ['♥', '♦', '♣', '♠'];
+        const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        const deck = [];
+        suits.forEach(suit => ranks.forEach(rank => deck.push({ suit, rank, id: `${rank}${suit}` })));
+        let stock = [], waste = [], foundations = [[], [], [], []], tableaus = [[], [], [], [], [], [], []];
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function initGame() {
+            stock = [...deck];
+            shuffle(stock);
+            for (let i = 0; i < 7; i++) {
+                for (let j = i; j < 7; j++) {
+                    const card = stock.pop();
+                    card.faceUp = j === i;
+                    tableaus[j].push(card);
+                }
+            }
+            render();
+        }
+
+        function render() {
+            document.getElementById('stock').innerHTML = stock.length ? `<div class="card face-down" draggable="true">Stock</div>` : '';
+            document.getElementById('waste').innerHTML = waste.slice(-3).map((card, i) =>
+                `<div class="card" style="left: ${i * 20}px" draggable="true" data-id="${card.id}">${card.rank}${card.suit}</div>`
+            ).join('');
+            for (let i = 0; i < 4; i++) {
+                const pile = foundations[i];
+                document.getElementById(`foundation-${i}`).innerHTML = pile.length ?
+                    `<div class="card" data-id="${pile[pile.length - 1].id}">${pile[pile.length - 1].rank}${pile[pile.length - 1].suit}</div>` : '';
+            }
+            for (let i = 0; i < 7; i++) {
+                const pile = tableaus[i];
+                document.getElementById(`tableau-${i}`).innerHTML = pile.map((card, j) =>
+                    `<div class="card ${card.faceUp ? '' : 'face-down'}" style="top: ${j * 20}px" draggable="${card.faceUp}" data-id="${card.id}">${card.faceUp ? `${card.rank}${card.suit}` : ''}</div>`
+                ).join('');
+            }
+            styleCards();
+            addDragEvents();
+        }
+
+        function styleCards() {
+            document.querySelectorAll('.card').forEach(card => {
+                const id = card.dataset.id;
+                if (!id) return;
+                const cardData = deck.find(c => c.id === id);
+                if (cardData.suit === '♥' || cardData.suit === '♦') {
+                    card.classList.add('red');
+                } else {
+                    card.classList.add('black');
+                }
+            });
+        }
+
+        function addDragEvents() {
+            document.querySelectorAll('.card[draggable=true]').forEach(card => {
+                card.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text', e.target.dataset.id);
+                });
+            });
+            document.querySelectorAll('.pile').forEach(pile => {
+                pile.addEventListener('dragover', e => e.preventDefault());
+                pile.addEventListener('drop', e => handleDrop(e));
+            });
+            document.getElementById('stock').addEventListener('click', drawCards);
+        }
+
+        function drawCards() {
+            if (stock.length === 0) {
+                stock = waste.reverse();
+                waste = [];
+                stock.forEach(card => card.faceUp = false);
+            } else {
+                const cardsToDraw = Math.min(3, stock.length);
+                for (let i = 0; i < cardsToDraw; i++) {
+                    const card = stock.pop();
+                    card.faceUp = true;
+                    waste.push(card);
+                }
+            }
+            render();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const cardId = e.dataTransfer.getData('text');
+            const card = deck.find(c => c.id === cardId);
+            const targetPile = e.currentTarget;
+            const pileType = targetPile.id.split('-')[0];
+            const pileIndex = parseInt(targetPile.id.split('-')[1]) || 0;
+
+            if (pileType === 'foundation') {
+                const foundation = foundations[pileIndex];
+                if (canMoveToFoundation(card, foundation)) {
+                    moveCard(card, findCardSource(card), foundation);
+                }
+            } else if (pileType === 'tableau') {
+                const tableau = tableaus[pileIndex];
+                if (canMoveToTableau(card, tableau)) {
+                    moveCard(card, findCardSource(card), tableau);
+                }
+            }
+            render();
+        }
+
+        function findCardSource(card) {
+            if (waste.includes(card)) return waste;
+            for (let tableau of tableaus) if (tableau.includes(card)) return tableau;
+            return null;
+        }
+
+        function canMoveToFoundation(card, foundation) {
+            if (!foundation.length) {
+                return card.rank === 'A';
+            }
+            const topCard = foundation[foundation.length - 1];
+            return card.suit === topCard.suit && ranks.indexOf(card.rank) === ranks.indexOf(topCard.rank) + 1;
+        }
+
+        function canMoveToTableau(card, tableau) {
+            if (!tableau.length) {
+                return card.rank === 'K';
+            }
+            const topCard = tableau[tableau.length - 1];
+            const isRed = ['♥', '♦'].includes(card.suit);
+            const topIsRed = ['♥', '♦'].includes(topCard.suit);
+            return isRed !== topIsRed && ranks.indexOf(card.rank) === ranks.indexOf(topCard.rank) - 1;
+        }
+
+        function moveCard(card, source, destination) {
+            if (source) {
+                source.splice(source.indexOf(card), 1);
+                destination.push(card);
+                card.faceUp = true;
+                if (source.length && source !== waste) {
+                    source[source.length - 1].faceUp = true;
+                }
+            }
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

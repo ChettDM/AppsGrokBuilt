@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Wooly Willy (CSS Face)</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            text-align: center;
+        }
+        #face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* Face behind canvas */
+        }
+        /* CSS Face Styling */
+        .head {
+            position: absolute;
+            width: 300px;
+            height: 350px;
+            background-color: #f4d7b2; /* Skin tone */
+            border-radius: 50%;
+            top: 25px;
+            left: 50px;
+            border: 2px solid #333;
+        }
+        .eye {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: white;
+            border-radius: 50%;
+            border: 2px solid #333;
+            top: 120px;
+        }
+        .eye.left {
+            left: 100px;
+        }
+        .eye.right {
+            left: 170px;
+        }
+        .pupil {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: black;
+            border-radius: 50%;
+            top: 10px;
+            left: 10px;
+        }
+        .nose {
+            position: absolute;
+            width: 40px;
+            height: 60px;
+            background-color: #e6b587; /* Slightly darker skin tone */
+            border-radius: 20px;
+            border: 2px solid #333;
+            top: 160px;
+            left: 130px;
+        }
+        .mouth {
+            position: absolute;
+            width: 80px;
+            height: 40px;
+            background-color: #d66;
+            border-radius: 0 0 40px 40px;
+            border: 2px solid #333;
+            top: 240px;
+            left: 110px;
+        }
+        .ear {
+            position: absolute;
+            width: 40px;
+            height: 60px;
+            background-color: #f4d7b2;
+            border-radius: 50%;
+            border: 2px solid #333;
+            top: 150px;
+        }
+        .ear.left {
+            left: 10px;
+        }
+        .ear.right {
+            right: 10px;
+        }
+        #canvas {
+            position: absolute;
+            z-index: 2; /* Canvas over face */
+            background: transparent; /* Transparent canvas */
+            border: 2px solid #333;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        #clear-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #clear-btn:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="face">
+            <div class="head">
+                <div class="eye left"><div class="pupil"></div></div>
+                <div class="eye right"><div class="pupil"></div></div>
+                <div class="nose"></div>
+                <div class="mouth"></div>
+                <div class="ear left"></div>
+                <div class="ear right"></div>
+            </div>
+        </div>
+        <canvas id="canvas" width="400" height="400"></canvas>
+        <button id="clear-btn">Clear Canvas</button>
+    </div>
+
+    <script>
+        // Get canvas and context
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const clearBtn = document.getElementById('clear-btn');
+
+        // Variables for drawing
+        let isDrawing = false;
+
+        // Start drawing on mouse down
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            draw(e);
+        });
+
+        // Stop drawing on mouse up
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+            ctx.beginPath(); // Reset path to prevent line connections
+        });
+
+        // Draw on mouse move
+        canvas.addEventListener('mousemove', draw);
+
+        // Clear canvas on button click
+        clearBtn.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Draw function
+        function draw(e) {
+            if (!isDrawing) return;
+
+            // Get mouse position relative to canvas
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Draw a small black dot (simulating iron filings)
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+            ctx.closePath();
+        }
+    </script>
+</body>
+</html>

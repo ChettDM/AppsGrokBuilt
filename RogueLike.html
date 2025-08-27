@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roguelike Shooter</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background: #222;
+            border: 2px solid #fff;
+        }
+        #game-over {
+            position: absolute;
+            color: red;
+            font-size: 48px;
+            display: none;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="game-over">Game Over!<br>Click to Restart</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverDisplay = document.getElementById('gameOver');
+
+        let player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: 20,
+            speed: 5,
+            health: 100
+        };
+        let bullets = [];
+        let enemies = [];
+        let score = 0;
+        let shotPower = 1;
+        let enemyStrength = 1;
+        let gameOver = false;
+
+        const keys = {};
+        document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+
+        canvas.addEventListener('click', (e) => {
+            if (gameOver) {
+                resetGame();
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+            bullets.push({
+                x: player.x,
+                y: player.y,
+                vx: Math.cos(angle) * 10,
+                vy: Math.sin(angle) * 10,
+                power: shotPower
+            });
+        });
+
+        function spawnEnemy() {
+            const side = Math.floor(Math.random() * 4);
+            let x, y, vx, vy;
+            const speed = 2 + score / 1000;
+            if (side === 0) { // Top
+                x = Math.random() * canvas.width;
+                y = 0;
+            } else if (side === 1) { // Right
+                x = canvas.width;
+                y = Math.random() * canvas.height;
+            } else if (side === 2) { // Bottom
+                x = Math.random() * canvas.width;
+                y = canvas.height;
+            } else { // Left
+                x = 0;
+                y = Math.random() * canvas.height;
+            }
+            const angle = Math.atan2(player.y - y, player.x - x);
+            vx = Math.cos(angle) * speed;
+            vy = Math.sin(angle) * speed;
+            enemies.push({
+                x, y, vx, vy,
+                size: 15 + enemyStrength * 5,
+                health: enemyStrength * 10
+            });
+        }
+
+        function resetGame() {
+            player = { x: canvas.width / 2, y: canvas.height / 2, size: 20, speed: 5, health: 100 };
+            bullets = [];
+            enemies = [];
+            score = 0;
+            shotPower = 1;
+            enemyStrength = 1;
+            gameOver = false;
+            gameOverDisplay.style.display = 'none';
+            scoreDisplay.textContent = `Score: ${score}`;
+            spawnEnemy();
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Player movement
+            if (keys['w'] && player.y > player.size) player.y -= player.speed;
+            if (keys['s'] && player.y < canvas.height - player.size) player.y += player.speed;
+            if (keys['a'] && player.x > player.size) player.x -= player.speed;
+            if (keys['d'] && player.x < canvas.width - player.size) player.x += player.speed;
+
+            // Update bullets
+            bullets = bullets.filter(b =>
+                b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height
+            );
+            bullets.forEach(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+            });
+
+            // Update enemies
+            enemies.forEach(e => {
+                e.x += e.vx;
+                e.y += e.vy;
+                // Collision with player
+                const dx = e.x - player.x;
+                const dy = e.y - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < e.size + player.size) {
+                    player.health -= 10;
+                    enemies = enemies.filter(enemy => enemy !== e);
+                    if (player.health <= 0) {
+                        gameOver = true;
+                        gameOverDisplay.style.display = 'block';
+                    }
+                }
+            });
+
+            // Bullet-enemy collision
+            bullets.forEach(b => {
+                enemies.forEach(e => {
+                    const dx = b.x - e.x;
+                    const dy = b.y - e.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < e.size) {
+                        e.health -= b.power;
+                        bullets = bullets.filter(bullet => bullet !== b);
+                        if (e.health <= 0) {
+                            enemies = enemies.filter(enemy => enemy !== e);
+                            score += 10;
+                            scoreDisplay.textContent = `Score: ${score}`;
+                            if (score % 100 === 0) {
+                                shotPower += 0.5;
+                                enemyStrength += 0.5;
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Spawn enemies
+            if (Math.random() < 0.02 + score / 10000) spawnEnemy();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw player
+            ctx.fillStyle = 'blue';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw bullets
+            ctx.fillStyle = `rgb(255, ${100 + shotPower * 50}, 0)`;
+            bullets.forEach(b => {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, 5 + shotPower, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw enemies
+            ctx.fillStyle = `rgb(${100 + enemyStrength * 50}, 0, 0)`;
+            enemies.forEach(e => {
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        spawnEnemy();
+        gameLoop();
+    </script>
+</body>
+</html>

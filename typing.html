@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Speed Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 90%;
+        }
+        #text-display {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+            line-height: 1.5;
+        }
+        #input-field {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        #results {
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Typing Speed Test</h1>
+        <div id="text-display"></div>
+        <textarea id="input-field" rows="4" placeholder="Start typing here..."></textarea>
+        <button onclick="startTest()">New Paragraph</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const textDisplay = document.getElementById('text-display');
+        const inputField = document.getElementById('input-field');
+        const results = document.getElementById('results');
+
+        const words = [
+            'the', 'quick', 'brown', 'fox', 'jumps', 'over', 'lazy', 'dog', 'sun', 'shines',
+            'bright', 'moon', 'stars', 'night', 'day', 'happy', 'sad', 'run', 'walk', 'sing'
+        ];
+
+        let startTime, paragraph;
+
+        function generateParagraph() {
+            const length = 20;
+            let para = '';
+            for (let i = 0; i < length; i++) {
+                const randomIndex = Math.floor(Math.random() * words.length);
+                para += words[randomIndex] + ' ';
+            }
+            return para.trim();
+        }
+
+        function startTest() {
+            paragraph = generateParagraph();
+            textDisplay.textContent = paragraph;
+            inputField.value = '';
+            inputField.focus();
+            results.textContent = '';
+            startTime = null;
+            inputField.addEventListener('input', checkInput);
+        }
+
+ @System: The code is incomplete as it doesn't include the `checkInput` function or the logic to calculate typing speed. I'll complete it for you.
+
+        function checkInput() {
+            if (!startTime) {
+                startTime = new Date();
+            }
+
+            const typedText = inputField.value.trim();
+            if (typedText === paragraph) {
+                const endTime = new Date();
+                const timeTaken = (endTime - startTime) / 1000 / 60; // minutes
+                const wordCount = paragraph.split(' ').length;
+                const wpm = Math.round(wordCount / timeTaken);
+                results.textContent = `Typing Speed: ${wpm} WPM`;
+                inputField.removeEventListener('input', checkInput);
+            }
+        }
+
+        // Initialize with a paragraph
+        startTest();
+    </script>
+</body>
+</html>

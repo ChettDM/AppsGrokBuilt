@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Old West Duel</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB 50%, #DAA520 50%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .scene {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sun {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #FFD700 60%, #FFA500);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+
+        .cowboy {
+            position: absolute;
+            bottom: 20%;
+            width: 60px;
+            height: 100px;
+        }
+
+        .cowboy-left {
+            left: 45%;
+            transform: scaleX(-1); /* Face right initially */
+        }
+
+        .cowboy-right {
+            left: 55%;
+        }
+
+        .cowboy-body {
+            width: 30px;
+            height: 60px;
+            background: #8B4513;
+            position: absolute;
+            bottom: 0;
+            left: 15px;
+            border-radius: 10px;
+        }
+
+        .cowboy-hat {
+            width: 40px;
+            height: 20px;
+            background: #4B2E2E;
+            position: absolute;
+            top: -20px;
+            left: 10px;
+            border-radius: 5px;
+        }
+
+        .cowboy-arm {
+            width: 30px;
+            height: 10px;
+            background: #8B4513;
+            position: absolute;
+            top: 20px;
+            transform-origin: left center;
+        }
+
+        .cowboy-left .cowboy-arm {
+            left: 30px;
+        }
+
+        .cowboy-right .cowboy-arm {
+            left: 0;
+        }
+
+        .gun {
+            width: 20px;
+            height: 5px;
+            background: #333;
+            position: absolute;
+            right: -15px;
+            top: 2.5px;
+            display: none;
+        }
+
+        .bullet {
+            width: 5px;
+            height: 5px;
+            background: #FFD700;
+            position: absolute;
+            border-radius: 50%;
+            display: none;
+        }
+
+        .cowboy-left .bullet {
+            right: -20px;
+            top: 25px;
+        }
+
+        .cowboy-right .bullet {
+            left: -20px;
+            top: 25px;
+        }
+
+        /* Animation keyframes */
+        @keyframes walk-left {
+            0% { left: 45%; }
+            100% { left: 30%; }
+        }
+
+        @keyframes walk-right {
+            0% { left: 55%; }
+            100% { left: 70%; }
+        }
+
+        @keyframes draw-gun {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-45deg); }
+        }
+
+        @keyframes bullet-left {
+            0% { display: block; right: -20px; }
+            100% { right: 50vw; }
+        }
+
+        @keyframes bullet-right {
+            0% { display: block; left: -20px; }
+            100% { left: 50vw; }
+        }
+    </style>
+</head>
+<body>
+    <div class="scene">
+        <div class="sun"></div>
+        <div class="cowboy cowboy-left" id="cowboy-left">
+            <div class="cowboy-body"></div>
+            <div class="cowboy-hat"></div>
+            <div class="cowboy-arm" id="arm-left">
+                <div class="gun" id="gun-left"></div>
+                <div class="bullet" id="bullet-left"></div>
+            </div>
+        </div>
+        <div class="cowboy cowboy-right" id="cowboy-right">
+            <div class="cowboy-body"></div>
+            <div class="cowboy-hat"></div>
+            <div class="cowboy-arm" id="arm-right">
+                <div class="gun" id="gun-right"></div>
+                <div class="bullet" id="bullet-right"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cowboyLeft = document.getElementById('cowboy-left');
+        const cowboyRight = document.getElementById('cowboy-right');
+        const armLeft = document.getElementById('arm-left');
+        const armRight = document.getElementById('arm-right');
+        const gunLeft = document.getElementById('gun-left');
+        const gunRight = document.getElementById('gun-right');
+        const bulletLeft = document.getElementById('bullet-left');
+        const bulletRight = document.getElementById('bullet-right');
+
+        function startDuel() {
+            // Step 1: Walk 10 paces (3 seconds)
+            cowboyLeft.style.animation = 'walk-left 3s linear forwards';
+            cowboyRight.style.animation = 'walk-right 3s linear forwards';
+
+            setTimeout(() => {
+                // Step 2: Turn to face each other
+                cowboyLeft.style.transform = '';
+                cowboyRight.style.transform = 'scaleX(-1)';
+
+                // Step 3: Draw guns (0.5 seconds)
+                setTimeout(() => {
+                    armLeft.style.animation = 'draw-gun 0.5s forwards';
+                    armRight.style.animation = 'draw-gun 0.5s forwards';
+                    gunLeft.style.display = 'block';
+                    gunRight.style.display = 'block';
+
+                    // Step 4: Fire bullets (0.5 seconds)
+                    setTimeout(() => {
+                        bulletLeft.style.display = 'block';
+                        bulletRight.style.display = 'block';
+                        bulletLeft.style.animation = 'bullet-left 0.5s linear forwards';
+                        bulletRight.style.animation = 'bullet-right 0.5s linear forwards';
+
+                        // Reset animation after completion
+                        setTimeout(() => {
+                            resetDuel();
+                        }, 1000);
+                    }, 500);
+                }, 500);
+            }, 3000);
+        }
+
+        function resetDuel() {
+            // Reset positions and styles
+            cowboyLeft.style.animation = '';
+            cowboyRight.style.animation = '';
+            armLeft.style.animation = '';
+            armRight.style.animation = '';
+            bulletLeft.style.animation = '';
+            bulletRight.style.animation = '';
+            cowboyLeft.style.left = '45%';
+            cowboyRight.style.left = '55%';
+            cowboyLeft.style.transform = 'scaleX(-1)';
+            cowboyRight.style.transform = '';
+            gunLeft.style.display = 'none';
+            gunRight.style.display = 'none';
+            bulletLeft.style.display = 'none';
+            bulletRight.style.display = 'none';
+            armLeft.style.transform = 'rotate(0deg)';
+            armRight.style.transform = 'rotate(0deg)';
+
+            // Restart duel
+            setTimeout(startDuel, 1000);
+        }
+
+        // Start the duel
+        startDuel();
+    </script>
+</body>
+</html>

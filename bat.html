@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flying Bat in Night Sky</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #0a0a23, #1b1b4d);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .sky {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .moon {
+            position: absolute;
+            top: 50px;
+            left: 100px;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #f4f4f9 70%, #d3d3e6);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .star {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+        }
+
+        .bat {
+            position: absolute;
+            width: 60px;
+            height: 40px;
+            top: 50%;
+            left: -100px; /* Start off-screen */
+        }
+
+        .bat-body {
+            width: 30px;
+            height: 20px;
+            background: #333;
+            border-radius: 50%;
+            position: absolute;
+            top: 10px;
+            left: 15px;
+        }
+
+        .wing {
+            width: 30px;
+            height: 30px;
+            background: #333;
+            position: absolute;
+            top: 5px;
+            border-radius: 50% 0 50% 50%;
+            transform-origin: center;
+        }
+
+        .wing-left {
+            left: 0;
+            transform: rotate(-45deg);
+            animation: flap-left 0.3s ease-in-out infinite alternate;
+        }
+
+        .wing-right {
+            right: 0;
+            transform: rotate(45deg);
+            border-radius: 0 50% 50% 50%;
+            animation: flap-right 0.3s ease-in-out infinite alternate;
+        }
+
+        @keyframes flap-left {
+            from { transform: rotate(-45deg); }
+            to { transform: rotate(-10deg); }
+        }
+
+        @keyframes flap-right {
+            from { transform: rotate(45deg); }
+            to { transform: rotate(10deg); }
+        }
+
+        @keyframes fly {
+            0% { left: -100px; top: 50%; }
+            50% { top: 45%; }
+            100% { left: 100%; top: 50%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sky">
+        <div class="moon"></div>
+        <div class="bat" id="bat">
+            <div class="bat-body"></div>
+            <div class="wing wing-left"></div>
+            <div class="wing wing-right"></div>
+        </div>
+    </div>
+
+    <script>
+        // Generate stars
+        const sky = document.querySelector('.sky');
+        for (let i = 0; i < 50; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = `${Math.random() * 3 + 1}px`;
+            star.style.height = star.style.width;
+            star.style.top = `${Math.random() * 100}%`;
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.opacity = Math.random() * 0.5 + 0.5;
+            sky.appendChild(star);
+        }
+
+        // Animate bat
+        const bat = document.getElementById('bat');
+        function flyBat() {
+            bat.style.animation = 'fly 10s linear infinite';
+        }
+        flyBat();
+    </script>
+</body>
+</html>
