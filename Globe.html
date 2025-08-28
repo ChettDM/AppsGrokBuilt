@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Globe</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Set up scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Create globe geometry
+        const geometry = new THREE.SphereGeometry(5, 64, 64);
+
+        // Create material for oceans (blue)
+        const oceanMaterial = new THREE.MeshPhongMaterial({ color: 0x1e90ff, shininess: 50 });
+
+        // Create globe mesh
+        const globe = new THREE.Mesh(geometry, oceanMaterial);
+        scene.add(globe);
+
+        // Add simple continent-like shapes (green patches)
+        const continentMaterial = new THREE.MeshPhongMaterial({ color: 0x228b22, shininess: 50 });
+        const continents = [
+            // Approximate continent positions (lat, lon, size)
+            { lat: 20, lon: -100, size: 2 }, // North America
+            { lat: -10, lon: -60, size: 1.5 }, // South America
+            { lat: 10, lon: 10, size: 2 }, // Africa
+            { lat: 50, lon: 20, size: 2.5 }, // Europe
+            { lat: 30, lon: 100, size: 3 }, // Asia
+            { lat: -30, lon: 130, size: 1.5 }, // Australia
+        ];
+
+        continents.forEach(c => {
+            const continentGeometry = new THREE.SphereGeometry(c.size, 32, 32);
+            const continent = new THREE.Mesh(continentGeometry, continentMaterial);
+            // Convert lat/lon to 3D position
+            const phi = (90 - c.lat) * Math.PI / 180;
+            const theta = (c.lon + 180) * Math.PI / 180;
+            continent.position.setFromSphericalCoords(5.01, phi, theta); // Slightly above globe surface
+            scene.add(continent);
+        });
+
+        // Add lighting
+        const light = new THREE.PointLight(0xffffff, 1, 100);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+
+        // Camera position
+        camera.position.z = 10;
+
+        // Mouse controls
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let rotation = { x: 0, y: 0 };
+
+        document.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaMove = {
+                    x: e.clientX - previousMousePosition.x,
+                    y: e.clientY - previousMousePosition.y
+                };
+                rotation.y += deltaMove.x * 0.005;
+                rotation.x += deltaMove.y * 0.005;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            globe.rotation.y = rotation.y;
+            globe.rotation.x = rotation.x;
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

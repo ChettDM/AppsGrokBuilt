@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        #game-container {
+            margin-top: 20px;
+        }
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            gap: 1px;
+            background-color: #ccc;
+            padding: 5px;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid #999;
+        }
+        .cell.revealed {
+            background-color: #fff;
+            cursor: default;
+        }
+        .cell.mine {
+            background-color: #ff4d4d;
+        }
+        .cell.flag {
+            background-color: #ffd700;
+        }
+        #status {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #restart {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Minesweeper</h1>
+    <div id="game-container">
+        <div id="grid"></div>
+        <div id="status">Flags remaining: 10</div>
+        <button id="restart">Restart Game</button>
+    </div>
+
+    <script>
+        const GRID_SIZE = 10;
+        const MINE_COUNT = 10;
+        let grid = [];
+        let revealedCount = 0;
+        let flagsRemaining = MINE_COUNT;
+        let gameOver = false;
+
+        const gridElement = document.getElementById('grid');
+        const statusElement = document.getElementById('status');
+        const restartButton = document.getElementById('restart');
+
+        function initializeGrid() {
+            grid = [];
+            revealedCount = 0;
+            flagsRemaining = MINE_COUNT;
+            gameOver = false;
+            gridElement.innerHTML = '';
+            statusElement.textContent = `Flags remaining: ${flagsRemaining}`;
+
+            // Create empty grid
+            for (let i = 0; i < GRID_SIZE; i++) {
+                grid[i] = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    grid[i][j] = { mine: false, revealed: false, flagged: false, adjacentMines: 0 };
+                }
+            }
+
+            // Place mines
+            let minesPlaced = 0;
+            while (minesPlaced < MINE_COUNT) {
+                const row = Math.floor(Math.random() * GRID_SIZE);
+                const col = Math.floor(Math.random() * GRID_SIZE);
+                if (!grid[row][col].mine) {
+                    grid[row][col].mine = true;
+                    minesPlaced++;
+                }
+            }
+
+            // Calculate adjacent mines
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (!grid[i][j].mine) {
+                        grid[i][j].adjacentMines = countAdjacentMines(i, j);
+                    }
+                }
+            }
+
+            // Render grid
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener('click', () => revealCell(i, j));
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        toggleFlag(i, j);
+                    });
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        function countAdjacentMines(row, col) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    const newRow = row + i;
+                    const newCol = col + j;
+                    if (newRow >= 0 && newRow < GRID_SIZE && newCol >= 0 && newCol < GRID_SIZE) {
+                        if (grid[newRow][newCol].mine) {
+                            count++;
+                        }
+                    }
+                }
+            }
+            return count;
+        }
+
+        function revealCell(row, col) {
+            if (gameOver || grid[row][col].revealed || grid[row][col].flagged) return;
+
+            grid[row][col].revealed = true;
+            const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            cellElement.classList.add('revealed');
+            revealedCount++;
+
+            if (grid[row][col].mine) {
+                cellElement.classList.add('mine');
+                gameOver = true;
+                statusElement.textContent = 'Game Over! You hit a mine.';
+                revealAllMines();
+                return;
+            }
+
+            if (grid[row][col].adjacentMines > 0) {
+                cellElement.textContent = grid[row][col].adjacentMines;
+            } else {
+                // Reveal adjacent cells if no adjacent mines
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        const newRow = row + i;
+                        const newCol = col + j;
+                        if (newRow >= 0 && newRow < GRID_SIZE && newCol >= 0 && newCol < GRID_SIZE) {
+                            revealCell(newRow, newCol);
+                        }
+                    }
+                }
+            }
+
+            checkWin();
+        }
+
+        function toggleFlag(row, col) {
+            if (gameOver || grid[row][col].revealed) return;
+
+            const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            if (!grid[row][col].flagged && flagsRemaining > 0) {
+                grid[row][col].flagged = true;
+                cellElement.classList.add('flag');
+                cellElement.textContent = '🚩';
+                flagsRemaining--;
+            } else if (grid[row][col].flagged) {
+                grid[row][col].flagged = false;
+                cellElement.classList.remove('flag');
+                cellElement.textContent = '';
+                flagsRemaining++;
+            }
+            statusElement.textContent = `Flags remaining: ${flagsRemaining}`;
+            checkWin();
+        }
+
+        function revealAllMines() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (grid[i][j].mine) {
+                        const cellElement = document.querySelector(`[data-row="${i}"][data-col="${j}"]`);
+                        cellElement.classList.add('mine');
+                        cellElement.textContent = '💣';
+                    }
+                }
+            }
+        }
+
+        function checkWin() {
+            if (revealedCount === GRID_SIZE * GRID_SIZE - MINE_COUNT) {
+                gameOver = true;
+                statusElement.textContent = 'Congratulations! You won!';
+            }
+        }
+
+        restartButton.addEventListener('click', initializeGrid);
+
+        // Initialize the game on page load
+        initializeGrid();
+    </script>
+</body>
+</html>

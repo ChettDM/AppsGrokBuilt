@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Bros Level 1-1</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #87CEEB; /* Sky blue background */
+            font-family: 'Arial', sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            background-color: #000;
+            overflow: hidden;
+            border: 2px solid #000;
+        }
+        #game-canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .game-object {
+            position: absolute;
+            box-sizing: border-box;
+        }
+        #mario {
+            width: 32px;
+            height: 32px;
+            background-color: red; /* Placeholder for Mario sprite */
+        }
+        .block {
+            width: 32px;
+            height: 32px;
+            background-color: brown; /* Placeholder for ? block or brick */
+            border: 2px solid #fff;
+        }
+        .goomba {
+            width: 32px;
+            height: 32px;
+            background-color: #8B4513; /* Placeholder for Goomba */
+        }
+        .ground {
+            width: 800px;
+            height: 64px;
+            background-color: green; /* Placeholder for ground */
+            bottom: 0;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-canvas">
+            <div id="mario" class="game-object"></div>
+            <!-- Blocks -->
+            <div class="block game-object" style="left: 200px; bottom: 96px;"></div>
+            <div class="block game-object" style="left: 232px; bottom: 96px;"></div>
+            <!-- Enemy -->
+            <div class="goomba game-object" style="left: 300px; bottom: 64px;"></div>
+            <!-- Ground -->
+            <div class="ground game-object"></div>
+        </div>
+        <div id="score">Score: 0</div>
+    </div>
+
+    <script>
+        // Game state
+        const mario = document.getElementById('mario');
+        const blocks = document.querySelectorAll('.block');
+        const goombas = document.querySelectorAll('.goomba');
+        const scoreDisplay = document.getElementById('score');
+        let marioX = 50;
+        let marioY = 64; // On ground
+        let velocityX = 0;
+        let velocityY = 0;
+        const gravity = 0.5;
+        const jumpPower = 10;
+        const moveSpeed = 3;
+        let isJumping = false;
+        let score = 0;
+        let keys = {};
+
+        // Enemy state
+        let goomba = goombas[0];
+        let goombaX = 300;
+        let goombaVelocityX = -1; // Move left
+        let goombaAlive = true;
+
+        // Keyboard input
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space' && !isJumping) {
+                velocityY = jumpPower;
+                isJumping = true;
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        // Collision detection
+        function checkCollision(obj1, obj1X, obj1Y, obj1Width, obj1Height, obj2, obj2X, obj2Y, obj2Width, obj2Height) {
+            return obj1X < obj2X + obj2Width &&
+                   obj1X + obj1Width > obj2X &&
+                   obj1Y < obj2Y + obj2Height &&
+                   obj1Y + obj1Height > obj2Y;
+        }
+
+        // Game loop
+        function gameLoop() {
+            // Update Mario
+            if (keys['ArrowLeft']) velocityX = -moveSpeed;
+            else if (keys['ArrowRight']) velocityX = moveSpeed;
+            else velocityX = 0;
+
+            // Apply gravity
+            velocityY -= gravity;
+            marioX += velocityX;
+            marioY += velocityY;
+
+            // Ground collision
+            if (marioY <= 64) {
+                marioY = 64;
+                velocityY = 0;
+                isJumping = false;
+            }
+
+            // Screen boundaries
+            if (marioX < 0) marioX = 0;
+            if (marioX > 768) marioX = 768; // 800 - Mario width
+
+            // Block collision
+            blocks.forEach(block => {
+                const blockX = parseInt(block.style.left);
+                const blockY = parseInt(block.style.bottom);
+                if (checkCollision(mario, marioX, marioY, 32, 32, block, blockX, blockY, 32, 32)) {
+                    // Hit block from below
+                    if (velocityY > 0 && marioY < blockY) {
+                        velocityY = 0;
+                        marioY = blockY - 32;
+                        score += 100;
+                        block.style.backgroundColor = 'gray'; // Simulate block hit
+                    }
+                    // Land on block
+                    else if (velocityY < 0 && marioY > blockY) {
+                        marioY = blockY + 32;
+                        velocityY = 0;
+                        isJumping = false;
+                    }
+                    // Side collision
+                    else if (velocityX !== 0) {
+                        marioX -= velocityX;
+                    }
+                }
+            });
+
+            // Goomba collision
+            if (goombaAlive && checkCollision(mario, marioX, marioY, 32, 32, goomba, goombaX, 64, 32, 32)) {
+                if (velocityY < 0 && marioY > 64) {
+                    // Stomp Goomba
+                    goombaAlive = false;
+                    goomba.style.display = 'none';
+                    score += 200;
+                    velocityY = jumpPower / 2; // Bounce
+                } else {
+                    // Game over (simplified)
+                    alert('Game Over! Score: ' + score);
+                    marioX = 50;
+                    marioY = 64;
+                    score = 0;
+                    goombaAlive = true;
+                    goomba.style.display = 'block';
+                    goombaX = 300;
+                }
+            }
+
+            // Update Goomba
+            if (goombaAlive) {
+                goombaX += goombaVelocityX;
+                if (goombaX < 0 || goombaX > 768) goombaVelocityX = -goombaVelocityX; // Turn around
+                goomba.style.left = goombaX + 'px';
+            }
+
+            // Update positions
+            mario.style.left = marioX + 'px';
+            mario.style.bottom = marioY + 'px';
+            scoreDisplay.textContent = 'Score: ' + score;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        gameLoop();
+    </script>
+</body>
+</html>
