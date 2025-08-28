@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spelling Word Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; text-align: center; }
+        .score { margin: 20px 0; font-weight: bold; }
+        #word-area { margin: 20px 0; }
+        #spelling-area { display: flex; justify-content: center; flex-wrap: wrap; }
+        #spelling-area button { margin: 5px; padding: 10px; font-size: 16px; cursor: pointer; }
+        #spelling-area button:disabled { background: #ccc; cursor: not-allowed; }
+        #current-spelling { 
+            min-height: 30px; 
+            margin: 10px 0; 
+            font-size: 18px; 
+            border: 2px solid #000; 
+            padding: 10px; 
+            display: inline-block; 
+            min-width: 100px; 
+        }
+        #attempts-left { margin: 10px 0; font-size: 16px; }
+        #reset { display: none; margin-top: 20px; }
+        #control-buttons { margin: 10px 0; }
+        #submit { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; }
+        #backspace { background-color: #FF8C00; color: white; border: none; padding: 10px 20px; }
+        #next-word { 
+            display: none; 
+            background-color: #1E90FF; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            margin: 10px; 
+        }
+        #hear-word { font-size: 24px; padding: 10px; border: none; background: none; cursor: pointer; }
+        .correct { color: green; }
+        .incorrect { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Spelling Word Game</h1>
+    <input type="file" id="vocabFile" accept=".txt">
+    <div class="score">Score: <span id="score">0</span></div>
+    <div id="word-area">
+        <button id="hear-word" style="display: none;" title="Hear Word">🔊</button>
+        <div id="current-spelling"></div>
+    </div>
+    <div id="control-buttons">
+        <button id="backspace" style="display: none;">Backspace</button>
+        <button id="submit" style="display: none;">Submit</button>
+        <button id="next-word">Next Word</button>
+    </div>
+    <div id="spelling-area"></div>
+    <div id="attempts-left"></div>
+    <button id="reset">Reset</button>
+
+    <script>
+        let vocabulary = [];
+        let score = 0;
+        let currentWord = null;
+        let usedWords = [];
+        let currentSpelling = '';
+        let currentLetters = [];
+        let attemptsLeft = 3;
+
+        document.getElementById('vocabFile').addEventListener('change', handleFile);
+        document.getElementById('hear-word').addEventListener('click', () => speakWord(currentWord));
+        document.getElementById('backspace').addEventListener('click', backspaceLetter);
+        document.getElementById('submit').addEventListener('click', checkSpelling);
+        document.getElementById('next-word').addEventListener('click', nextWord);
+        document.getElementById('reset').addEventListener('click', resetGame);
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const lines = e.target.result.split('\n').filter(line => line.trim());
+                vocabulary = lines.map(line => {
+                    const [word, definition] = line.split(' : ').map(str => str.trim());
+                    return { word, definition };
+                });
+                startGame();
+            };
+            reader.readAsText(file);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function speakWord(word) {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function generateRandomLetters(word) {
+            const wordLetters = word.toLowerCase().split('');
+            const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+            const extraLetters = [];
+            const extraCount = Math.max(5, word.length); // Ensure some extra letters
+            while (extraLetters.length < extraCount) {
+                const randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+                if (!wordLetters.includes(randomLetter) && !extraLetters.includes(randomLetter)) {
+                    extraLetters.push(randomLetter);
+                }
+            }
+            return shuffle([...wordLetters, ...extraLetters]);
+        }
+
+        function startGame() {
+            usedWords = [];
+            attemptsLeft = 3;
+            document.getElementById('reset').style.display = 'none';
+            document.getElementById('hear-word').style.display = 'block';
+            document.getElementById('backspace').style.display = 'block';
+            document.getElementById('submit').style.display = 'block';
+            document.getElementById('next-word').style.display = 'none';
+            document.getElementById('attempts-left').textContent = `Attempts left: ${attemptsLeft}`;
+            nextWord();
+        }
+
+        function nextWord() {
+            currentSpelling = '';
+            attemptsLeft = 3;
+            document.getElementById('current-spelling').textContent = '';
+            document.getElementById('current-spelling').className = '';
+            document.getElementById('attempts-left').textContent = `Attempts left: ${attemptsLeft}`;
+            document.getElementById('spelling-area').innerHTML = '';
+            document.getElementById('next-word').style.display = 'none';
+            document.getElementById('backspace').style.display = 'block';
+            document.getElementById('submit').style.display = 'block';
+
+            const remainingWords = vocabulary.filter(item => !usedWords.includes(item.word));
+            if (remainingWords.length === 0) {
+                document.getElementById('hear-word').style.display = 'none';
+                document.getElementById('backspace').style.display = 'none';
+                document.getElementById('submit').style.display = 'none';
+                document.getElementById('attempts-left').textContent = '';
+                document.getElementById('reset').style.display = 'block';
+                return;
+            }
+
+            currentWord = remainingWords[Math.floor(Math.random() * remainingWords.length)].word;
+            currentLetters = generateRandomLetters(currentWord);
+            speakWord(currentWord); // Auto-play the word
+
+            currentLetters.forEach(letter => {
+                const button = document.createElement('button');
+                button.textContent = letter;
+                button.addEventListener('click', () => selectLetter(letter, button));
+                document.getElementById('spelling-area').appendChild(button);
+            });
+        }
+
+        function selectLetter(letter, button) {
+            currentSpelling += letter;
+            document.getElementById('current-spelling').textContent = currentSpelling;
+            button.disabled = true;
+        }
+
+        function backspaceLetter() {
+            if (currentSpelling.length > 0) {
+                const lastLetter = currentSpelling.slice(-1);
+                currentSpelling = currentSpelling.slice(0, -1);
+                document.getElementById('current-spelling').textContent = currentSpelling;
+                document.getElementById('current-spelling').className = '';
+                const buttons = document.getElementById('spelling-area').querySelectorAll('button');
+                for (let btn of buttons) {
+                    if (btn.textContent === lastLetter && btn.disabled) {
+                        btn.disabled = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        function checkSpelling() {
+            if (currentSpelling.length === 0) return; // Prevent empty submissions
+            const spellingArea = document.getElementById('spelling-area');
+            const currentSpellingDiv = document.getElementById('current-spelling');
+            if (currentSpelling.toLowerCase() === currentWord.toLowerCase()) {
+                score++;
+                currentSpellingDiv.className = 'correct';
+                usedWords.push(currentWord);
+                spellingArea.querySelectorAll('button').forEach(btn => btn.disabled = true);
+                setTimeout(nextWord, 1000); // Move to next word after correct answer
+            } else {
+                attemptsLeft--;
+                score--;
+                currentSpellingDiv.className = 'incorrect';
+                document.getElementById('attempts-left').textContent = `Attempts left: ${attemptsLeft}`;
+                if (attemptsLeft === 0) {
+                    currentSpellingDiv.textContent = `Correct answer: ${currentWord}`;
+                    usedWords.push(currentWord);
+                    spellingArea.querySelectorAll('button').forEach(btn => btn.disabled = true);
+                    document.getElementById('backspace').style.display = 'none';
+                    document.getElementById('submit').style.display = 'none';
+                    document.getElementById('next-word').style.display = 'inline-block';
+                } else {
+                    setTimeout(() => {
+                        // Reset the spelling attempt
+                        currentSpelling = '';
+                        document.getElementById('current-spelling').textContent = '';
+                        document.getElementById('current-spelling').className = '';
+                        spellingArea.querySelectorAll('button').forEach(btn => btn.disabled = false);
+                    }, 1000); // Reset after 1-second delay
+                }
+            }
+            document.getElementById('score').textContent = score;
+        }
+
+        function resetGame() {
+            startGame();
+        }
+    </script>
+</body>
+</html>
