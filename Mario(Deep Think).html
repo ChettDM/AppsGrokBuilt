@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mario Bros - First Level</title>
+    <style>
+        body { margin: 0; background: black; }
+        canvas { display: block; margin: auto; image-rendering: pixelated; width: 512px; height: 448px; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="256" height="224"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        const GRAVITY = 0.5;
+        const JUMP_SPEED = -8;
+        const MOVE_SPEED = 2;
+
+        const platforms = [
+            {x: 0, y: 208, width: 256, height: 16}, // bottom floor
+            {x: 64, y: 160, width: 128, height: 8}, // center long
+            {x: 32, y: 112, width: 64, height: 8}, // left short
+            {x: 160, y: 112, width: 64, height: 8}, // right short
+            {x: 16, y: 64, width: 224, height: 8} // top long
+        ];
+
+        const pipes = [
+            {x: 16, y: 0, width: 32, height: 32}, // top left
+            {x: 208, y: 0, width: 32, height: 32}, // top right
+            {x: 16, y: 208, width: 32, height: 16}, // bottom left
+            {x: 208, y: 208, width: 32, height: 16} // bottom right
+        ];
+
+        let powBlock = {x: 120, y: 184, width: 16, height: 16, uses: 3};
+
+        let player = {
+            x: 32,
+            y: 192,
+            width: 16,
+            height: 16,
+            vx: 0,
+            vy: 0,
+            onGround: false,
+            facingRight: true
+        };
+
+        let enemies = [];
+
+        function spawnEnemy() {
+            const side = Math.random() < 0.5 ? 'left' : 'right';
+            const x = side === 'left' ? 32 : 224;
+            enemies.push({
+                x: x,
+                y: 32,
+                width: 16,
+                height: 16,
+                vx: side === 'left' ? MOVE_SPEED : -MOVE_SPEED,
+                vy: 0,
+                flipped: false,
+                flipTime: 0,
+                angry: false
+            });
+        }
+
+        let toSpawn = 3; // For phase 1
+        let spawned = 0;
+
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.key] = true);
+        window.addEventListener('keyup', e => keys[e.key] = false);
+
+        function update() {
+            player.vx = 0;
+            if (keys['ArrowLeft']) {
+                player.vx = -MOVE_SPEED;
+                player.facingRight = false;
+            }
+            if (keys['ArrowRight']) {
+                player.vx = MOVE_SPEED;
+                player.facingRight = true;
+            }
+            if (keys['ArrowUp'] && player.onGround) {
+                player.vy = JUMP_SPEED;
+                player.onGround = false;
+            }
+
+            player.vy += GRAVITY;
+            player.x += player.vx;
+            player.y += player.vy;
+
+            if (player.x < 0) player.x = 256;
+            if (player.x > 256) player.x = 0;
+
+            player.onGround = false;
+            for (let plat of platforms) {
+                if (player.vy > 0 &&
+                    player.y + player.height <= plat.y &&
+                    player.y + player.height + player.vy > plat.y &&
+                    player.x + player.width > plat.x &&
+                    player.x < plat.x + plat.width) {
+                    player.y = plat.y - player.height;
+                    player.vy = 0;
+                    player.onGround = true;
+                }
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let enemy = enemies[i];
+                enemy.vy += GRAVITY;
+                enemy.x += enemy.vx;
+                enemy.y += enemy.vy;
+
+                for (let plat of platforms) {
+                    if (enemy.vy > 0 &&
+                        enemy.y + enemy.height <= plat.y &&
+                        enemy.y + enemy.height + enemy.vy > plat.y &&
+                        enemy.x + enemy.width > plat.x &&
+                        enemy.x < plat.x + plat.width) {
+                        enemy.y = plat.y - enemy.height;
+                        enemy.vy = 0;
+                    }
+                }
+
+                if (enemy.x < 0) enemy.x = 256;
+                if (enemy.x > 256) enemy.x = 0;
+
+                if (enemy.flipped) {
+                    if (Date.now() - enemy.flipTime > 5000) {
+                        enemy.flipped = false;
+                        enemy.angry = true;
+                        enemy.vx *= 1.5;
+                    }
+                } else {
+                    if (enemy.y + enemy.height >= 208) {
+                        if (enemy.x < 48 || enemy.x > 208) {
+                            enemy.angry = true;
+                            enemy.vx *= 1.5;
+                            enemy.y = 32;
+                            enemy.x = enemy.x < 48 ? 32 : 224;
+                        }
+                    }
+                }
+
+                // Hit from below
+                if (player.vy < 0 &&
+                    player.y >= enemy.y + enemy.height &&
+                    player.y + player.vy < enemy.y + enemy.height &&
+                    player.x + player.width > enemy.x &&
+                    player.x < enemy.x + enemy.width &&
+                    !enemy.flipped) {
+                    enemy.flipped = true;
+                    enemy.flipTime = Date.now();
+                    enemy.vy = -4;
+                    player.vy = -player.vy * 0.5;
+                }
+
+                // Collision with player
+                if (Math.abs(player.x - enemy.x) < player.width &&
+                    Math.abs(player.y - enemy.y) < player.height) {
+                    if (enemy.flipped) {
+                        enemies.splice(i, 1);
+                    } else {
+                        console.log('Player died!');
+                        // Add death logic here if needed
+                    }
+                }
+            }
+
+            // POW block (use ArrowDown to activate)
+            if (keys['ArrowDown'] && powBlock.uses > 0) {
+                powBlock.uses--;
+                for (let enemy of enemies) {
+                    if (!enemy.flipped) {
+                        enemy.flipped = true;
+                        enemy.flipTime = Date.now();
+                        enemy.vy = -4;
+                    }
+                }
+            }
+
+            if (spawned < toSpawn && enemies.length < 3) {
+                spawnEnemy();
+                spawned++;
+            }
+
+            if (enemies.length === 0 && spawned === toSpawn) {
+                console.log('Phase 1 complete!');
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, 256, 224);
+
+            ctx.fillStyle = 'brown';
+            ctx.fillRect(platforms[0].x, platforms[0].y, platforms[0].width, platforms[0].height);
+
+            ctx.fillStyle = 'cyan';
+            for (let i = 1; i < platforms.length; i++) {
+                ctx.fillRect(platforms[i].x, platforms[i].y, platforms[i].width, platforms[i].height);
+            }
+
+            ctx.fillStyle = 'green';
+            for (let pipe of pipes) {
+                ctx.fillRect(pipe.x, pipe.y, pipe.width, pipe.height);
+            }
+
+            if (powBlock.uses > 0) {
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(powBlock.x, powBlock.y, powBlock.width, powBlock.height);
+            }
+
+            ctx.fillStyle = 'red';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            for (let enemy of enemies) {
+                ctx.fillStyle = enemy.angry ? 'red' : 'green';
+                if (enemy.flipped) {
+                    ctx.fillRect(enemy.x, enemy.y - 8, enemy.width, enemy.height);
+                } else {
+                    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                }
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>

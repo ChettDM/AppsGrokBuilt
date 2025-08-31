@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlight Solitaire</title>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #game-container {
+            text-align: center;
+        }
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            gap: 2px;
+            background-color: #0f0f23;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .tile {
+            width: 60px;
+            height: 60px;
+            background-color: #2a2a4a;
+            border: 1px solid #3a3a5a;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .lit {
+            background-color: #e0e0e0;
+            box-shadow: 0 0 10px #ffffff;
+        }
+        .sticky {
+            background-color: #4a2a4a;
+        }
+        .sticky.lit {
+            background-color: #9a6a9a;
+        }
+        .star {
+            background-color: #ffffff;
+            box-shadow: 0 0 15px #ffffff, 0 0 25px #ffcc00;
+        }
+        #info {
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+        #reset-btn {
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #4a4a8a;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #reset-btn:hover {
+            background-color: #5a5a9a;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="grid"></div>
+        <div id="info">Moves: <span id="move-count">0</span></div>
+        <button id="reset-btn">Reset</button>
+    </div>
+    <script>
+        const GRID_SIZE = 5;
+        const STICKY_COUNT = 3;
+        let grid = [];
+        let starPos = { x: 0, y: 0 };
+        let moveCount = 0;
+        let gameWon = false;
+
+        // Initialize the grid
+        function initGrid() {
+            grid = [];
+            for (let i = 0; i < GRID_SIZE; i++) {
+                let row = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    row.push({ lit: false, sticky: false, stickyLit: 0 });
+                }
+                grid.push(row);
+            }
+
+            // Place sticky tiles
+            let stickyPlaced = 0;
+            while (stickyPlaced < STICKY_COUNT) {
+                let x = Math.floor(Math.random() * GRID_SIZE);
+                let y = Math.floor(Math.random() * GRID_SIZE);
+                if (!grid[x][y].sticky) {
+                    grid[x][y].sticky = true;
+                    stickyPlaced++;
+                }
+            }
+
+            // Place star at random position
+            starPos.x = Math.floor(Math.random() * GRID_SIZE);
+            starPos.y = Math.floor(Math.random() * GRID_SIZE);
+            lightTile(starPos.x, starPos.y);
+        }
+
+        // Light up a tile
+        function lightTile(x, y) {
+            if (grid[x][y].sticky) {
+                grid[x][y].stickyLit++;
+                if (grid[x][y].stickyLit >= 2) {
+                    grid[x][y].lit = true;
+                }
+            } else {
+                grid[x][y].lit = true;
+            }
+        }
+
+        // Check if all tiles are lit
+        function checkWin() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (!grid[i][j].lit && (!grid[i][j].sticky || grid[i][j].stickyLit < 2)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Render the grid
+        function renderGrid() {
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    if (grid[i][j].lit || (grid[i][j].sticky && grid[i][j].stickyLit >= 2)) {
+                        tile.classList.add('lit');
+                    } else if (grid[i][j].sticky) {
+                        tile.classList.add('sticky');
+                    }
+                    if (i === starPos.x && j === starPos.y) {
+                        tile.classList.add('star');
+                    }
+                    gridElement.appendChild(tile);
+                }
+            }
+            document.getElementById('move-count').textContent = moveCount;
+            if (checkWin() && !gameWon) {
+                gameWon = true;
+                setTimeout(() => alert(`You won in ${moveCount} moves!`), 100);
+            }
+        }
+
+        // Move the star
+        function moveStar(dx, dy) {
+            if (gameWon) return;
+            let newX = starPos.x + dx;
+            let newY = starPos.y + dy;
+            if (newX >= 0 && newX < GRID_SIZE && newY >= 0 && newY < GRID_SIZE) {
+                starPos.x = newX;
+                starPos.y = newY;
+                moveCount++;
+                lightTile(newX, newY);
+                renderGrid();
+            }
+        }
+
+        // Handle key presses
+        document.addEventListener('keydown', (e) => {
+            if (gameWon) return;
+            switch (e.key) {
+                case 'ArrowUp': moveStar(-1, 0); break;
+                case 'ArrowDown': moveStar(1, 0); break;
+                case 'ArrowLeft': moveStar(0, -1); break;
+                case 'ArrowRight': moveStar(0, 1); break;
+            }
+        });
+
+        // Reset game
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            moveCount = 0;
+            gameWon = false;
+            initGrid();
+            renderGrid();
+        });
+
+        // Start the game
+        initGrid();
+        renderGrid();
+    </script>
+</body>
+</html>

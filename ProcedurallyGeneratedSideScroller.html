@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Side-Scrolling Game</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.0.0/simplex-noise.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Game variables
+        const player = {
+            x: 100,
+            y: canvas.height - 50,
+            width: 30,
+            height: 30,
+            velocityY: 0,
+            jumpPower: -15,
+            isJumping: false
+        };
+        const gravity = 0.6;
+        const scrollSpeed = 3;
+        let terrain = [];
+        let obstacles = [];
+        let cameraX = 0;
+        const noise = new SimplexNoise();
+        let gameOver = false;
+        let score = 0;
+
+        // Generate initial terrain
+        function generateTerrain() {
+            terrain = [];
+            for (let x = 0; x < canvas.width * 2; x += 10) {
+                const noiseValue = noise.noise2D((x + cameraX) * 0.002, 0);
+                const height = canvas.height - (noiseValue + 1) * 100 - 50;
+                terrain.push({ x: x + cameraX, y: height });
+            }
+        }
+
+        // Generate obstacles
+        function generateObstacles() {
+            obstacles = [];
+            for (let x = cameraX; x < cameraX + canvas.width * 2; x += 50) {
+                const noiseValue = noise.noise2D((x + 1000) * 0.003, 0);
+                if (Math.random() < 0.02 && noiseValue > 0.3) {
+                    const terrainHeight = getTerrainHeight(x);
+                    obstacles.push({ x, y: terrainHeight - 20, width: 20, height: 20 });
+                }
+            }
+        }
+
+        // Get terrain height at x position
+        function getTerrainHeight(x) {
+            const noiseValue = noise.noise2D(x * 0.002, 0);
+            return canvas.height - (noiseValue + 1) * 100 - 50;
+        }
+
+        // Handle player input
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !player.isJumping && !gameOver) {
+                player.velocityY = player.jumpPower;
+                player.isJumping = true;
+            }
+            if (e.code === 'KeyR' && gameOver) {
+                resetGame();
+            }
+        });
+
+        // Reset game
+        function resetGame() {
+            player.x = 100;
+            player.y = canvas.height - 50;
+            player.velocityY = 0;
+            player.isJumping = false;
+            cameraX = 0;
+            score = 0;
+            gameOver = false;
+            terrain = [];
+            obstacles = [];
+            generateTerrain();
+            generateObstacles();
+        }
+
+        // Update game state
+        function update() {
+            if (gameOver) return;
+
+            // Update player
+            player.velocityY += gravity;
+            player.y += player.velocityY;
+
+            // Check for ground collision
+            const terrainHeight = getTerrainHeight(player.x + cameraX);
+            if (player.y + player.height > terrainHeight) {
+                player.y = terrainHeight - player.height;
+                player.velocityY = 0;
+                player.isJumping = false;
+            }
+
+            // Scroll camera
+            cameraX += scrollSpeed;
+            score += 0.1;
+
+            // Update terrain
+            while (terrain.length > 0 && terrain[0].x < cameraX - 10) {
+                terrain.shift();
+            }
+            const lastX = terrain.length > 0 ? terrain[terrain.length - 1].x : cameraX;
+            for (let x = lastX + 10; x < cameraX + canvas.width * 2; x += 10) {
+                const noiseValue = noise.noise2D(x * 0.002, 0);
+                const height = canvas.height - (noiseValue + 1) * 100 - 50;
+                terrain.push({ x, y: height });
+            }
+
+            // Update obstacles
+            obstacles = obstacles.filter(obstacle => obstacle.x > cameraX - 50);
+            for (let x = cameraX + canvas.width; x < cameraX + canvas.width * 2; x += 50) {
+                const noiseValue = noise.noise2D((x + 1000) * 0.003, 0);
+                if (Math.random() < 0.02 && noiseValue > 0.3) {
+                    const terrainHeight = getTerrainHeight(x);
+                    obstacles.push({ x, y: terrainHeight - 20, width: 20, height: 20 });
+                }
+            }
+
+            // Check for collisions
+            for (let obstacle of obstacles) {
+                if (
+                    player.x + player.width > obstacle.x &&
+                    player.x < obstacle.x + obstacle.width &&
+                    player.y + player.height > obstacle.y &&
+                    player.y < obstacle.y + obstacle.height
+                ) {
+                    gameOver = true;
+                }
+            }
+        }
+
+        // Render game
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw terrain
+            ctx.fillStyle = 'green';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let point of terrain) {
+                ctx.lineTo(point.x - cameraX, point.y);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw obstacles
+            ctx.fillStyle = 'red';
+            for (let obstacle of obstacles) {
+                ctx.fillRect(obstacle.x - cameraX, obstacle.y, obstacle.width, obstacle.height);
+            }
+
+            // Draw player
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Draw score
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${Math.floor(score)}`, 10, 30);
+
+            // Draw game over
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '40px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+                ctx.font = '20px Arial';
+                ctx.fillText('Press R to Restart', canvas.width / 2, canvas.height / 2 + 40);
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize and start game
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starforge</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background: #1a1a2e; color: #e6e6fa; }
+        #game { display: flex; gap: 20px; }
+        #grid { display: grid; grid-template-columns: repeat(5, 60px); gap: 2px; background: #0f0f23; padding: 5px; }
+        .cell { width: 60px; height: 60px; border: 1px solid #4b4b7c; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .cell.star { background: #ffcc00; color: #000; }
+        .cell.planet { background: #00ccff; color: #000; }
+        .cell:hover { background: #4b4b7c; }
+        #controls { display: flex; flex-direction: column; gap: 10px; }
+        button { padding: 10px; background: #4b4b7c; color: #e6e6fa; border: none; cursor: pointer; }
+        button:hover { background: #6b6b9c; }
+        #inventory { display: flex; gap: 10px; }
+        .item { padding: 10px; background: #2a2a4e; cursor: pointer; }
+        .item.selected { border: 2px solid #ffcc00; }
+        #score { font-size: 18px; }
+    </style>
+</head>
+<body>
+    <h1>Starforge</h1>
+    <div id="game">
+        <div id="grid"></div>
+        <div id="controls">
+            <div id="inventory">
+                <div class="item" data-type="star">Star (3)</div>
+                <div class="item" data-type="planet">Planet (5)</div>
+            </div>
+            <button id="finalize">Finalize System</button>
+            <div id="score">Aether: 0</div>
+        </div>
+    </div>
+    <script>
+        const gridSize = 5;
+        const grid = Array(gridSize).fill().map(() => Array(gridSize).fill(null));
+        let selectedItem = null;
+        let inventory = { star: 3, planet: 5 };
+        let aether = 0;
+
+        // Initialize grid
+        const gridDiv = document.getElementById('grid');
+        for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.row = i;
+                cell.dataset.col = j;
+                cell.addEventListener('click', () => placeObject(i, j));
+                gridDiv.appendChild(cell);
+            }
+        }
+
+        // Inventory selection
+        document.querySelectorAll('.item').forEach(item => {
+            item.addEventListener('click', () => {
+                selectedItem = item.dataset.type;
+                document.querySelectorAll('.item').forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+            });
+        });
+
+        // Place object on grid
+        function placeObject(row, col) {
+            if (!selectedItem || inventory[selectedItem] <= 0 || grid[row][col]) return;
+            if (selectedItem === 'star' && hasAdjacentStar(row, col)) return; // No adjacent stars
+            grid[row][col] = selectedItem;
+            inventory[selectedItem]--;
+            updateGrid();
+            updateInventory();
+        }
+
+        // Check for adjacent stars
+        function hasAdjacentStar(row, col) {
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            return directions.some(([dr, dc]) => {
+                const r = row + dr, c = col + dc;
+                return r >= 0 && r < gridSize && c >= 0 && c < gridSize && grid[r][c] === 'star';
+            });
+        }
+
+        // Update grid display
+        function updateGrid() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                const row = cell.dataset.row, col = cell.dataset.col;
+                cell.className = 'cell';
+                if (grid[row][col]) cell.classList.add(grid[row][col]);
+                cell.textContent = grid[row][col] ? grid[row][col][0].toUpperCase() : '';
+            });
+        }
+
+        // Update inventory display
+        function updateInventory() {
+            document.querySelectorAll('.item').forEach(item => {
+                const type = item.dataset.type;
+                item.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} (${inventory[type]})`;
+            });
+        }
+
+        // Calculate Aether and finalize
+        document.getElementById('finalize').addEventListener('click', () => {
+            aether = 0;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    if (grid[i][j] === 'star') {
+                        aether += 10; // Base Aether for star
+                        if (hasEmptySpace(i, j)) aether += 5; // Bonus for empty space around
+                    } else if (grid[i][j] === 'planet') {
+                        aether += 5; // Base Aether for planet
+                        if (isOrbitingStar(i, j)) aether += 5; // Bonus for orbiting
+                        if (hasAdjacentPlanet(i, j)) aether -= 3; // Penalty for crowding
+                    }
+                }
+            }
+            document.getElementById('score').textContent = `Aether: ${aether}`;
+            alert(`System Finalized! Aether: ${aether}`);
+        });
+
+        // Check if star has empty space
+        function hasEmptySpace(row, col) {
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            return directions.every(([dr, dc]) => {
+                const r = row + dr, c = col + dc;
+                return r < 0 || r >= gridSize || c < 0 || c >= gridSize || !grid[r][c];
+            });
+        }
+
+        // Check if planet is orbiting a star
+        function isOrbitingStar(row, col) {
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+            return directions.some(([dr, dc]) => {
+                const r = row + dr, c = col + dc;
+                return r >= 0 && r < gridSize && c >= 0 && c < gridSize && grid[r][c] === 'star';
+            });
+        }
+
+        // Check for adjacent planets
+        function hasAdjacentPlanet(row, col) {
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            return directions.some(([dr, dc]) => {
+                const r = row + dr, c = col + dc;
+                return r >= 0 && r < gridSize && c >= 0 && c < gridSize && grid[r][c] === 'planet';
+            });
+        }
+    </script>
+</body>
+</html>

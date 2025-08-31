@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creature Companion</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>Creature Companion</h1>
+        <div class="creature" id="fluffel-jelly"></div>
+        <div class="status">
+            <p>Hunger: <span id="hunger">50</span></p>
+            <p>Happiness: <span id="happiness">50</span></p>
+            <p>Energy: <span id="energy">50</span></p>
+        </div>
+        <div class="actions">
+            <button onclick="feed()">Feed</button>
+            <button onclick="play()">Play</button>
+            <button onclick="rest()">Rest</button>
+        </div>
+        <p id="message">Hi! I'm your Fluffel Jelly!</p>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

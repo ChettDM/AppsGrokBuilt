@@ -1,0 +1,90 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f4f8;
+}
+
+.game-container {
+    text-align: center;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #4a4a4a;
+}
+
+.creature {
+    width: 100px;
+    height: 100px;
+    background-color: #ffcccb;
+    border-radius: 50%;
+    margin: 20px auto;
+    position: relative;
+    transition: transform 0.3s, background-color 0.3s;
+}
+
+.creature::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: #000;
+    border-radius: 50%;
+    top: 20px;
+    left: 20px;
+}
+
+.creature::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: #000;
+    border-radius: 50%;
+    top: 20px;
+    right: 20px;
+}
+
+.creature.happy {
+    background-color: #90ee90;
+    transform: scale(1.1);
+}
+
+.creature.sad {
+    background-color: #add8e6;
+    transform: scale(0.9);
+}
+
+.status p {
+    margin: 10px 0;
+    font-size: 18px;
+}
+
+.actions button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #6a5acd;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.actions button:hover {
+    background-color: #483d8b;
+}
+
+#message {
+    margin-top: 20px;
+    font-style: italic;
+    color: #4a4a4a;
+}
